@@ -11,26 +11,25 @@ import time
 # These are ESTIMATES based on the provided screenshot and may need tuning!
 # Format: (left_edge_pct, top_edge_pct, width_pct, height_pct)
 ROI_DEFINITIONS_PCT = {
-    "timer":            (0.83, 0.065, 0.12, 0.04),  # Moved down/right slightly, narrowed
-    "elixir_bar":       (0.28, 0.905, 0.44, 0.03),  # Defined more accurately, smaller height
-    "cards_area":       (0.16, 0.81, 0.68, 0.09),   # Reduced height slightly
-    "card_1":           (0.175, 0.815, 0.15, 0.075), # Shifted right, narrowed, reduced height
-    "card_2":           (0.345, 0.815, 0.15, 0.075), # Shifted right, narrowed, reduced height
-    "card_3":           (0.515, 0.815, 0.15, 0.075), # Shifted right, narrowed, reduced height
-    "card_4":           (0.685, 0.815, 0.15, 0.075), # Shifted right, narrowed, reduced height
-    "next_card":        (0.035, 0.835, 0.09, 0.06),  # Shifted right/down, narrowed, reduced height
-    # --- Health Bars (Approximate - focus on the bar itself) ---
+    "timer":            (0.785, 0.059, 0.13, 0.035),  # Shifted right slightly, narrowed
+    "elixir_bar":       (0.248, 0.953, 0.08, 0.03),  # Looks good, kept same
+    # Cards adjusted down slightly, narrowed, and shortened
+    "card_1":           (0.21, 0.837, 0.163, 0.12),
+    "card_2":           (0.383, 0.837, 0.163, 0.12),
+    "card_3":           (0.558, 0.837, 0.163, 0.12),
+    "card_4":           (0.734, 0.837, 0.163, 0.12),
+    "next_card":        (0.048, 0.935, 0.076, 0.056),  # Looks good, kept same
+    # --- Health Bars (Looked good, kept same) ---
     # Player Towers
-    "player_hp_left":   (0.18, 0.67, 0.12, 0.015),  # Moved up
-    "player_hp_king":   (0.43, 0.75, 0.14, 0.015),  # Moved up
-    "player_hp_right":  (0.70, 0.67, 0.12, 0.015),  # Moved up
+    "player_hp_left":   (0.182, 0.635, 0.078, 0.017),
+    "player_hp_king":   (0.43, 0.75, 0.14, 0.015),
+    "player_hp_right":  (0.67, 0.635, 0.078, 0.017),
     # Opponent Towers
-    "opp_hp_left":      (0.18, 0.18, 0.12, 0.015),  # Moved up
-    "opp_hp_king":      (0.43, 0.10, 0.14, 0.015),  # Moved up
-    "opp_hp_right":     (0.70, 0.18, 0.12, 0.015),  # Moved up
-    # --- Full Arena (for CNN input, excluding hand/top bar maybe?) ---
-    "arena_full":       (0.02, 0.05, 0.96, 0.75), # Kept same for now
-    "arena_playable":   (0.03, 0.25, 0.94, 0.55), # Kept same for now
+    "opp_hp_left":      (0.185, 0.167, 0.078, 0.017),
+    "opp_hp_king":      (0.43, 0.10, 0.14, 0.015),
+    "opp_hp_right":     (0.673, 0.167, 0.078, 0.017),
+    # --- Arena Areas (Kept same) ---
+    "arena_full":       (0.064, 0.112, 0.8, 0.668)
 }
 
 # Drawing Configuration

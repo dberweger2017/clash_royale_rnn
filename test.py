@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-
+# test.py
 import subprocess
 import re
 import os

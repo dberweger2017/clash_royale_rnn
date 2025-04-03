@@ -134,8 +134,10 @@ if __name__ == "__main__":
         # Save in the current directory
         output_filename = f"bluestacks_capture_{timestamp}.png"
         output_filepath = os.path.join(os.getcwd(), output_filename)
-
+        start = time.time()
         capture_success = capture_window_region(x, y, w, h, output_filepath)
+        end = time.time()
+        print(f"Capture took {end - start} seconds.")
         if not capture_success:
              sys.exit(1) # Exit with error if capture failed
 

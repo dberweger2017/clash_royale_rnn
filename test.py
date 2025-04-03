@@ -56,9 +56,8 @@ def get_window_geometry(app_name, window_title):
              print(f"AppleScript Error: {output}", file=sys.stderr)
              return None
 
-        # Parse the output like: "{ {100, 50}, {1200, 800} }"
-        # Need to adjust regex slightly if spaces vary
-        match = re.match(r"\{\s*\{(\d+),\s*(\d+)\},\s*\{(\d+),\s*(\d+)\}\s*\}", output)
+        match = re.match(r"(\d+),\s*(\d+),\s*(\d+),\s*(\d+)", output)
+
         if match:
             x, y, w, h = map(int, match.groups())
             print(f"Found window '{window_title}' geometry: x={x}, y={y}, w={w}, h={h}")

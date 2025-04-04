@@ -1,0 +1,16 @@
+# Absolute path to the directory containing train/, valid/, test/
+path: /Users/dberweger/Desktop/Code/clash_royale_rnn/Annotated
+# Relative path to the directory containing train/, valid/, test/
+
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 14
+names: ['0', '1', '2', '3', '4', '5', '7', '9', 'Battle', 'Enemy Tower', 'Ennemy Winner', 'Friendly Tower', 'Friendly Winner', 'OK']
+
+roboflow:
+  workspace: winnie-yzsvn
+  project: clash-royale
+  version: 1
+  license: CC BY 4.0

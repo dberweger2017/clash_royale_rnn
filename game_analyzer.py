@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# game_analyzer.py
 
 import cv2 # OpenCV for image processing
 import os
@@ -27,19 +27,6 @@ ROI_DEFINITIONS_PCT = {
     "opp_hp_right":     (0.673, 0.167, 0.078, 0.017),
     "arena_playable":   (0.064, 0.112, 0.8, 0.668)
 }
-
-# --- Card Info (Placeholder - Replace with actual data) ---
-CARD_INFO = {
-    "Arrows": {"cost": 3},
-    "Archers": {"cost": 3},
-    "Giant": {"cost": 5},
-    "Musketeer": {"cost": 4},
-    "Knight": {"cost": 3},
-    "Unknown": {"cost": -1},
-    "Placeholder": {"cost": 0}
-}
-# --- Card Templates (Placeholder - Load actual images later) ---
-CARD_TEMPLATES = {}
 
 # Drawing Configuration
 RECT_COLOR = (0, 255, 0)
@@ -124,9 +111,6 @@ def extract_elixir_ocr(image_crop):
         # The elixir number seems dark on a light background in the purple drop
         _, thresh = cv2.threshold(resized, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
-        # Optional: Save preprocessed image for debugging
-        # cv2.imwrite("debug_elixir_thresh.png", thresh)
-
         # Tesseract Configuration
         # --psm 7: Treat the image as a single text line.
         # --psm 10: Treat the image as a single character. (Good for single digits)
@@ -135,6 +119,8 @@ def extract_elixir_ocr(image_crop):
         config = "--psm 10 -c tessedit_char_whitelist=0123456789"
 
         text = pytesseract.image_to_string(thresh, config=config).strip()
+
+        print(f"Text: {text}")
 
         # Basic validation
         if text.isdigit():
@@ -274,19 +260,6 @@ if __name__ == "__main__":
         game_state['time_seconds'] = extract_timer_ocr(timer_crop) # <-- Now implemented
     else:
         game_state['time_seconds'] = -1
-
-    # --- Cards ---
-    card_keys = [k for k in absolute_rois if k.startswith('card_')]
-    card_keys.append("next_card")
-    game_state['cards'] = {}
-    for key in card_keys:
-        if key in absolute_rois:
-            card_crop = crop_roi(img, absolute_rois[key])
-            card_name = identify_card_template(card_crop, CARD_TEMPLATES) # Still placeholder
-            card_cost = CARD_INFO.get(card_name, {"cost": -1})["cost"]
-            game_state['cards'][key] = {'name': card_name, 'cost': card_cost}
-        else:
-             game_state['cards'][key] = {'name': 'Unknown', 'cost': -1}
 
     # --- Arena Image ---
     if "arena_full" in absolute_rois:

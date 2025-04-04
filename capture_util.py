@@ -1,4 +1,4 @@
-# test.py
+# capture_util.py
 import subprocess
 import re
 import os
@@ -52,8 +52,8 @@ def get_window_geometry(app_name, window_title):
         output = result.stdout.strip()
 
         if output.startswith("Error:"):
-             print(f"AppleScript Error: {output}", file=sys.stderr)
-             return None
+            print(f"AppleScript Error: {output}", file=sys.stderr)
+            return None
 
         match = re.match(r"(\d+),\s*(\d+),\s*(\d+),\s*(\d+)", output)
 
@@ -72,9 +72,9 @@ def get_window_geometry(app_name, window_title):
         print(f"Stderr: {e.stderr}", file=sys.stderr)
         print(f"Stdout: {e.stdout}", file=sys.stderr)
         if "Application isn't running" in e.stderr or "Application isn't running" in e.stdout:
-             print(f"'{app_name}' process might not be running.", file=sys.stderr)
+            print(f"'{app_name}' process might not be running.", file=sys.stderr)
         elif "access" in e.stderr or "access" in e.stdout or "assistive devices" in e.stderr:
-             print("Hint: Check Accessibility permissions for Terminal/Python/IDE in System Settings > Privacy & Security.", file=sys.stderr)
+            print("Hint: Check Accessibility permissions for Terminal/Python/IDE in System Settings > Privacy & Security.", file=sys.stderr)
         return None
     except Exception as e:
         print(f"An unexpected error occurred getting geometry: {e}", file=sys.stderr)
@@ -108,7 +108,7 @@ def capture_window_region(x, y, width, height, output_path):
         print(f"Stderr: {e.stderr}", file=sys.stderr)
         print(f"Stdout: {e.stdout}", file=sys.stderr)
         if "permissions" in e.stderr or "permissions" in e.stdout:
-             print("Hint: Check Screen Recording permissions for Terminal/Python/IDE in System Settings > Privacy & Security.", file=sys.stderr)
+            print("Hint: Check Screen Recording permissions for Terminal/Python/IDE in System Settings > Privacy & Security.", file=sys.stderr)
         return False
     except Exception as e:
         print(f"An unexpected error occurred during capture: {e}", file=sys.stderr)
@@ -139,7 +139,7 @@ if __name__ == "__main__":
         end = time.time()
         print(f"Capture took {end - start} seconds.")
         if not capture_success:
-             sys.exit(1) # Exit with error if capture failed
+            sys.exit(1) # Exit with error if capture failed
 
     else:
         print(f"Could not capture screenshot because window geometry for '{WINDOW_TITLE}' was not found.")

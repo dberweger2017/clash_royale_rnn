@@ -13,13 +13,12 @@ DELAY_SECONDS = 1.0         # Capture interval in seconds
 APP_NAME = capture_util.APP_NAME
 WINDOW_TITLE = capture_util.WINDOW_TITLE
 VIS_WINDOW_NAME = "Clash Royale Analysis"
-SAVE_ANNOTATED = False      # Set True to save annotated frames
-OUTPUT_FOLDER = "annotated"  # Only used if SAVE_ANNOTATED == True
+SAVE_ANNOTATED = True       # Save annotated frames to disk
+OUTPUT_FOLDER = "annotated"  # Directory for annotated frames
 # ------------------------
 
-# Create folder for annotated frames if needed
-if SAVE_ANNOTATED:
-    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+# Ensure output directory exists
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 
 def grab_frame():
@@ -44,7 +43,7 @@ def extract_game_stats(img):
 
     def hp_pct(roi):
         hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(hsv, np.array([50,150,150]), np.array([90,255,255]))
+        mask = cv2.inRange(hsv, np.array([50, 150, 150]), np.array([90, 255, 255]))
         cols = np.any(mask, axis=0)
         if not np.any(cols):
             return 0.0
@@ -52,23 +51,25 @@ def extract_game_stats(img):
         right = len(cols) - 1 - np.argmax(cols[::-1])
         return (right - left) / float(len(cols))
 
-    roi_left  = img[bar_y:bar_y+bar_h, lx1:lx2]
-    roi_right = img[bar_y:bar_y+bar_h, rx1:rx2]
-    left_hp   = hp_pct(roi_left)
-    right_hp  = hp_pct(roi_right)
+    roi_left = img[bar_y:bar_y + bar_h, lx1:lx2]
+    roi_right = img[bar_y:bar_y + bar_h, rx1:rx2]
+    left_hp = hp_pct(roi_left)
+    right_hp = hp_pct(roi_right)
 
     # Elixir ROI
-    el_y1, el_y2 = int(0.88*h), int(0.97*h)
-    el_x1, el_x2 = int(0.25*w), int(0.75*w)
+    el_y1, el_y2 = int(0.88 * h), int(0.97 * h)
+    el_x1, el_x2 = int(0.25 * w), int(0.75 * w)
     roi_el = img[el_y1:el_y2, el_x1:el_x2]
     hsv_el = cv2.cvtColor(roi_el, cv2.COLOR_BGR2HSV)
-    mask_el = cv2.inRange(hsv_el, np.array([130,100,100]), np.array([160,255,255]))
+    mask_el = cv2.inRange(hsv_el, np.array([130, 100, 100]), np.array([160, 255, 255]))
     num_labels, _ = cv2.connectedComponents(mask_el)
     elixir = max(0, num_labels - 1)
 
-    rois = ((lx1, bar_y, lx2, bar_y+bar_h),
-            (rx1, bar_y, rx2, bar_y+bar_h),
-            (el_x1, el_y1, el_x2, el_y2))
+    rois = (
+        (lx1, bar_y, lx2, bar_y + bar_h),
+        (rx1, bar_y, rx2, bar_y + bar_h),
+        (el_x1, el_y1, el_x2, el_y2)
+    )
     stats = (left_hp, right_hp, elixir)
     return stats, rois
 
@@ -78,18 +79,18 @@ def annotate_image(img, stats, rois):
     (lx1, ly1, lx2, ly2), (rx1, ry1, rx2, ry2), (ex1, ey1, ex2, ey2) = rois
     vis = img.copy()
 
-    # Health bars
-    cv2.rectangle(vis, (lx1, ly1), (lx2, ly2), (0,255,0), 2)
-    cv2.rectangle(vis, (lx1, ly1), (lx1 + int(left_hp*(lx2-lx1)), ly2), (0,255,0), -1)
-    cv2.putText(vis, f"L: {int(left_hp*100)}%", (lx1, ly1-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
+    # Draw health bars and fill
+    cv2.rectangle(vis, (lx1, ly1), (lx2, ly2), (0, 255, 0), 2)
+    cv2.rectangle(vis, (lx1, ly1), (lx1 + int(left_hp * (lx2 - lx1)), ly2), (0, 255, 0), -1)
+    cv2.putText(vis, f"L: {int(left_hp * 100)}%", (lx1, ly1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
 
-    cv2.rectangle(vis, (rx1, ry1), (rx2, ry2), (0,255,0), 2)
-    cv2.rectangle(vis, (rx1, ry1), (rx1 + int(right_hp*(rx2-rx1)), ry2), (0,255,0), -1)
-    cv2.putText(vis, f"R: {int(right_hp*100)}%", (rx1, ry1-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
+    cv2.rectangle(vis, (rx1, ry1), (rx2, ry2), (0, 255, 0), 2)
+    cv2.rectangle(vis, (rx1, ry1), (rx1 + int(right_hp * (rx2 - rx1)), ry2), (0, 255, 0), -1)
+    cv2.putText(vis, f"R: {int(right_hp * 100)}%", (rx1, ry1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
 
-    # Elixir
-    cv2.rectangle(vis, (ex1, ey1), (ex2, ey2), (255,0,255), 2)
-    cv2.putText(vis, f"Elixir: {elixir}", (ex1, ey1-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,255), 1)
+    # Draw elixir box and count
+    cv2.rectangle(vis, (ex1, ey1), (ex2, ey2), (255, 0, 255), 2)
+    cv2.putText(vis, f"Elixir: {elixir}", (ex1, ey1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
 
     return vis
 
@@ -114,12 +115,12 @@ def main():
             combined = np.hstack((annotated, img))
             cv2.imshow(VIS_WINDOW_NAME, combined)
 
-            if SAVE_ANNOTATED:
-                out_path = os.path.join(OUTPUT_FOLDER, f"ann_{frame_count}.png")
-                cv2.imwrite(out_path, annotated)
+            # Save annotated frame
+            out_path = os.path.join(OUTPUT_FOLDER, f"ann_{frame_count:04d}.png")
+            cv2.imwrite(out_path, annotated)
 
             frame_count += 1
-            key = cv2.waitKey(int(DELAY_SECONDS*1000)) & 0xFF
+            key = cv2.waitKey(int(DELAY_SECONDS * 1000)) & 0xFF
             if key == ord('q'):
                 break
 

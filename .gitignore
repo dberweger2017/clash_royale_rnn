@@ -1,1 +1,4 @@
 bluestacks_capture*.png
+**/__pycache__
+/img
+**/.DS_Store

@@ -1,77 +1,147 @@
+# capture_and_visualize.py
+
 import os
 import time
 import sys
-import capture_util # Assuming capture_util.py is in the same directory
+import cv2
+import numpy as np
+import capture_util  # Make sure capture_util.py is alongside this script
 
 # --- Configuration ---
-OUTPUT_FOLDER = "img"
-DELAY_SECONDS = 1.0 # Interval between screenshots
-# Use the same constants as capture_util for consistency
+OUTPUT_FOLDER = "img"      # Where to save raw frames (optional)
+DELAY_SECONDS = 1.0         # Capture interval in seconds
 APP_NAME = capture_util.APP_NAME
 WINDOW_TITLE = capture_util.WINDOW_TITLE
-# --- End Configuration ---
+VIS_WINDOW_NAME = "Clash Royale Analysis"
+# ------------------------
+
 
 def ensure_dir(folder_path):
-    """Creates the directory if it doesn't exist."""
     try:
         os.makedirs(folder_path, exist_ok=True)
-        # print(f"Output directory '{folder_path}' ensured.") # Optional
     except OSError as e:
         print(f"Error creating directory '{folder_path}': {e}", file=sys.stderr)
-        sys.exit(1) # Exit if we can't create the folder
+        sys.exit(1)
+
+
+def extract_game_stats(img):
+    h, w = img.shape[:2]
+    # Tower health bar ROIs (tweak fractions if needed)
+    bar_h = int(0.03 * h)
+    bar_y = int(0.06 * h)
+    lx1, lx2 = int(0.20 * w), int(0.40 * w)
+    rx1, rx2 = int(0.60 * w), int(0.80 * w)
+
+    def hp_pct(roi):
+        hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+        lower = np.array([50, 150, 150])
+        upper = np.array([90, 255, 255])
+        mask = cv2.inRange(hsv, lower, upper)
+        cols = np.any(mask, axis=0)
+        if not np.any(cols):
+            return 0.0
+        left = np.argmax(cols)
+        right = len(cols) - 1 - np.argmax(cols[::-1])
+        return (right - left) / float(len(cols))
+
+    roi_left = img[bar_y:bar_y+bar_h, lx1:lx2]
+    roi_right = img[bar_y:bar_y+bar_h, rx1:rx2]
+    left_hp = hp_pct(roi_left)
+    right_hp = hp_pct(roi_right)
+
+    # Elixir bar ROI
+    el_y1 = int(0.88 * h)
+    el_y2 = int(0.97 * h)
+    el_x1 = int(0.25 * w)
+    el_x2 = int(0.75 * w)
+    roi_el = img[el_y1:el_y2, el_x1:el_x2]
+    hsv_el = cv2.cvtColor(roi_el, cv2.COLOR_BGR2HSV)
+    lower_p = np.array([130, 100, 100])
+    upper_p = np.array([160, 255, 255])
+    mask_el = cv2.inRange(hsv_el, lower_p, upper_p)
+    num_labels, _ = cv2.connectedComponents(mask_el)
+    elixir = max(0, num_labels - 1)
+
+    return (left_hp, right_hp, elixir), ((lx1, bar_y, lx2, bar_y+bar_h),
+                                          (rx1, bar_y, rx2, bar_y+bar_h),
+                                          (el_x1, el_y1, el_x2, el_y2))
+
+
+def annotate_image(img, stats, rois):
+    (left_hp, right_hp, elixir) = stats
+    ((lx1, ly1, lx2, ly2), (rx1, ry1, rx2, ry2), (ex1, ey1, ex2, ey2)) = rois
+    vis = img.copy()
+
+    # Draw health bar outlines
+    cv2.rectangle(vis, (lx1, ly1), (lx2, ly2), (0, 255, 0), 2)
+    cv2.rectangle(vis, (rx1, ry1), (rx2, ry2), (0, 255, 0), 2)
+    # Fill health bars
+    cv2.rectangle(vis, (lx1, ly1), (lx1 + int(left_hp * (lx2-lx1)), ly2), (0, 255, 0), -1)
+    cv2.rectangle(vis, (rx1, ry1), (rx1 + int(right_hp * (rx2-rx1)), ry2), (0, 255, 0), -1)
+    # Annotate percentages
+    cv2.putText(vis, f"L: {int(left_hp*100)}%", (lx1, ly1-5),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
+    cv2.putText(vis, f"R: {int(right_hp*100)}%", (rx1, ry1-5),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
+
+    # Draw elixir ROI and text
+    cv2.rectangle(vis, (ex1, ey1), (ex2, ey2), (255, 0, 255), 2)
+    cv2.putText(vis, f"Elixir: {elixir}", (ex1, ey1-5),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,255), 1)
+
+    return vis
+
 
 def main():
-    print("--- Continuous Screenshot Utility ---")
-    print(f"Target App: {APP_NAME}")
-    print(f"Target Window: {WINDOW_TITLE}")
-    print(f"Saving images to: {OUTPUT_FOLDER}/")
-    print(f"Interval: {DELAY_SECONDS} seconds")
-    print("Press Ctrl+C to stop.")
-    print("\nNOTE: Ensure Accessibility and Screen Recording permissions are granted.")
+    # Prepare output folder if needed
+    out_dir = os.path.join(os.getcwd(), OUTPUT_FOLDER)
+    ensure_dir(out_dir)
 
-    # Create full path for the output folder relative to the script location
-    output_path_full = os.path.join(os.getcwd(), OUTPUT_FOLDER)
-    ensure_dir(output_path_full)
+    cv2.namedWindow(VIS_WINDOW_NAME, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(VIS_WINDOW_NAME, 800, 600)
+    # You can move the window to left monitor with moveWindow(x, y)
+    # cv2.moveWindow(VIS_WINDOW_NAME, 0, 0)
 
-    screenshot_count = 0
+    frame_count = 0
     try:
         while True:
-            # print(f"\n[{time.strftime('%H:%M:%S')}] Searching for window...") # Optional verbose
-            geometry = capture_util.get_window_geometry(APP_NAME, WINDOW_TITLE)
+            geom = capture_util.get_window_geometry(APP_NAME, WINDOW_TITLE)
+            if not geom:
+                print(f"Window not found, retrying...", file=sys.stderr)
+                time.sleep(DELAY_SECONDS)
+                continue
 
-            if geometry:
-                x, y, w, h = geometry
-                timestamp = int(time.time())
-                filename = f"screenshot_{timestamp}.png"
-                filepath = os.path.join(output_path_full, filename)
+            x, y, w, h = geom
+            ts = int(time.time())
+            fname = f"frame_{ts}.png"
+            fpath = os.path.join(out_dir, fname)
+            if not capture_util.capture_window_region(x, y, w, h, fpath):
+                time.sleep(DELAY_SECONDS)
+                continue
 
-                # print(f"[{time.strftime('%H:%M:%S')}] Capturing...") # Optional verbose
-                # Use the capture function from capture_util
-                # Note: capture_window_region already prints messages
-                success = capture_util.capture_window_region(x, y, w, h, filepath)
+            img = cv2.imread(fpath)
+            if img is None:
+                print(f"Failed to load captured image '{fpath}'", file=sys.stderr)
+                time.sleep(DELAY_SECONDS)
+                continue
 
-                if success:
-                    screenshot_count += 1
-                    # print(f"Screenshot {screenshot_count} saved.") # Optional verbose
-                else:
-                    print(f"[{time.strftime('%H:%M:%S')}] Capture failed.", file=sys.stderr)
-                    # Optional: Add a small extra delay on failure?
-                    # time.sleep(1)
+            stats, rois = extract_game_stats(img)
+            annotated = annotate_image(img, stats, rois)
 
-            else:
-                print(f"[{time.strftime('%H:%M:%S')}] Window '{WINDOW_TITLE}' not found. Retrying...")
-                # No screenshot taken, just wait for the next cycle
+            # Side-by-side: analysis left, original right
+            combined = np.hstack((annotated, img))
+            cv2.imshow(VIS_WINDOW_NAME, combined)
 
-            # Wait for the specified delay before the next attempt
+            frame_count += 1
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
             time.sleep(DELAY_SECONDS)
 
     except KeyboardInterrupt:
-        print("\n--- Stopping Screenshot Utility ---")
-        print(f"Captured {screenshot_count} screenshots in '{OUTPUT_FOLDER}'.")
-    except Exception as e:
-        print(f"\nAn unexpected error occurred: {e}", file=sys.stderr)
+        print(f"\nStopped after {frame_count} frames.")
     finally:
-        print("Exiting.")
+        cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
